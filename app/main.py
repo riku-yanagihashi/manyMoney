@@ -7,7 +7,7 @@ from server import server_thread
 TOKEN = os.environ.get("TOKEN")
 
 BALANCES_FILE = 'balances.json'
-ADMIN_USER_IDS = ["123456789012345678", "987654321098765432"]  # 管理者ユーザーのIDをリストに追加
+ADMIN_USER_IDS_FILE = 'admin_user_ids.json'
 
 # 所持金データを読み込む関数
 def load_balances():
@@ -24,6 +24,21 @@ def save_balances():
     with open(BALANCES_FILE, 'w') as file:
         json.dump(user_balances, file)
 
+# 管理者ユーザーIDを読み込む関数
+def load_admin_user_ids():
+    try:
+        with open(ADMIN_USER_IDS_FILE, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
+        return []
+
+# 管理者ユーザーIDを保存する関数
+def save_admin_user_ids():
+    with open(ADMIN_USER_IDS_FILE, 'w') as file:
+        json.dump(admin_user_ids, file)
+
 # インテントの設定
 intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
 
@@ -32,6 +47,7 @@ bot = Client(token=TOKEN, intents=intents)
 
 # ユーザーの所持金を管理する辞書
 user_balances = load_balances()
+admin_user_ids = load_admin_user_ids()
 
 # ボットが起動したときの処理
 @bot.listen()
@@ -48,6 +64,11 @@ def set_balance(guild_id, user_id, amount):
         user_balances[guild_id] = {}
     user_balances[guild_id][user_id] = amount
     save_balances()
+
+# サーバー主を特定する関数
+async def get_guild_owner(ctx):
+    guild = await ctx.get_guild()
+    return guild.owner_id
 
 # ユーザーの所持金を表示するコマンド
 @slash_command(name="balance", description="Displays your balance or the balance of a specified user", options=[
@@ -140,7 +161,7 @@ async def request(ctx: ComponentContext, amount: int, member):
     }
 ])
 async def give(ctx: ComponentContext, amount: int, member):
-    if str(ctx.author.id) not in ADMIN_USER_IDS:
+    if str(ctx.author.id) not in admin_user_ids:
         await ctx.send('このコマンドを実行する権限がありません。')
         return
     
@@ -170,7 +191,7 @@ async def give(ctx: ComponentContext, amount: int, member):
     }
 ])
 async def confiscation(ctx: ComponentContext, amount: int, member):
-    if str(ctx.author.id) not in ADMIN_USER_IDS:
+    if str(ctx.author.id) not in admin_user_ids:
         await ctx.send('このコマンドを実行する権限がありません。')
         return
     
@@ -188,9 +209,32 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
 
+# 管理者を追加するコマンド（サーバー主のみ実行可能）
+@slash_command(name="add_admin", description="Add a user as an admin", options=[
+    {
+        "name": "user",
+        "description": "The user to add as admin",
+        "type": 6,  # USER
+        "required": True
+    }
+])
+async def add_admin(ctx: ComponentContext, user):
+    guild_owner_id = await get_guild_owner(ctx)
+    if str(ctx.author.id) != str(guild_owner_id):
+        await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。')
+        return
+    
+    user_id = str(user.id)
+    if user_id not in admin_user_ids:
+        admin_user_ids.append(user_id)
+        save_admin_user_ids()
+        await ctx.send(f'{user.mention} さんが管理者として追加されました。')
+    else:
+        await ctx.send(f'{user.mention} さんは既に管理者です。')
+
 async def main():
     server_thread()
-    await bot.astart()
+    await bot.astart()  # bot.start() -> bot.astart() に変更
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
