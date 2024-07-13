@@ -1,6 +1,8 @@
 from interactions import Client, Intents, ComponentContext, slash_command
 
-TOKEN = ''
+# token.txtファイルからトークンを読み込む
+with open('token.txt', 'r') as file:
+    TOKEN = file.read().strip()
 
 
 # インテントの設定
@@ -18,11 +20,19 @@ async def on_ready():
     print(f'Logged in as {bot.me.name}')
 
 # ユーザーの所持金を表示するコマンド
-@slash_command(name="balance", description="Displays your balance")
-async def balance(ctx: ComponentContext):
-    user_id = str(ctx.author.id)
+@slash_command(name="balance", description="Displays your balance or the balance of a specified user", options=[
+    {
+        "name": "user",
+        "description": "The user whose balance you want to see",
+        "type": 6,  # USER
+        "required": False
+    }
+])
+async def balance(ctx: ComponentContext, user=None):
+    target_user = user or ctx.author
+    user_id = str(target_user.id)
     balance = user_balances.get(user_id, 0)
-    await ctx.send(f'{ctx.author.mention}さんの所持金は {balance} VTD です。')
+    await ctx.send(f'{target_user.mention}さんの所持金は {balance} VTD です。')
 
 # 通貨の受け渡しを行うコマンド
 @slash_command(name="pay", description="Pay VTD to another user", options=[
