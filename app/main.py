@@ -66,9 +66,9 @@ def set_balance(guild_id, user_id, amount):
     save_balances()
 
 # サーバー主を特定する関数
-async def get_guild_owner(ctx):
-    guild = await ctx.get_guild()
-    return guild.owner_id
+def get_guild_owner(guild_id):
+    guild = bot.get_guild(guild_id)
+    return guild._owner_id
 
 # ユーザーの所持金を表示するコマンド
 @slash_command(name="balance", description="Displays your balance or the balance of a specified user", options=[
@@ -219,7 +219,7 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
     }
 ])
 async def add_admin(ctx: ComponentContext, user):
-    guild_owner_id = await get_guild_owner(ctx)
+    guild_owner_id = get_guild_owner(ctx.guild_id)
     if str(ctx.author.id) != str(guild_owner_id):
         await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。')
         return
