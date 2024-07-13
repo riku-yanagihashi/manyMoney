@@ -33,7 +33,7 @@ bot = Client(token=TOKEN, intents=intents)
 user_balances = load_balances()
 
 # ボットが起動したときの処理
-@bot.event
+@bot.listen()
 async def on_ready():
     print(f'Logged in as {bot.me.name}')
 
@@ -181,7 +181,8 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
 
 async def main():
     server_thread()
-    await bot.start()
+    await bot.astart()  # bot.start() -> bot.astart() に変更
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
