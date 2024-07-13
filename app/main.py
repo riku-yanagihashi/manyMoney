@@ -4,7 +4,7 @@ import asyncio
 from interactions import Client, Intents, ComponentContext, slash_command
 from server import server_thread
 
-TOKEN = os.environ.get("TOKEN2")
+TOKEN = os.environ.get("TOKEN")
 
 BALANCES_FILE = 'balances.json'
 ADMIN_USER_IDS_FILE = 'admin_user_ids.json'
