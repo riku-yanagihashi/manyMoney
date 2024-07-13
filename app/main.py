@@ -1,4 +1,5 @@
 import json
+import asyncio
 from interactions import Client, Intents, ComponentContext, slash_command
 from server import server_thread
 
@@ -179,6 +180,9 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
 
-# Botの起動とDiscordサーバーへの接続
-server_thread()
-bot.start()
+async def main():
+    server_thread()
+    await bot.start()
+
+if __name__ == "__main__":
+    asyncio.run(main())
