@@ -1,5 +1,5 @@
 FROM python:3.11
-WORKDIR /bot
+WORKDIR /app
 
 # 日本語ロケールとタイムゾーンの設定
 RUN apt-get update && apt-get -y install locales && apt-get -y upgrade && \
