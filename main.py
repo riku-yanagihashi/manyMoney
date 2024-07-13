@@ -36,6 +36,17 @@ user_balances = load_balances()
 async def on_ready():
     print(f'Logged in as {bot.me.name}')
 
+# サーバーごとにユーザーの所持金を取得する関数
+def get_balance(guild_id, user_id):
+    return user_balances.get(guild_id, {}).get(user_id, 0)
+
+# サーバーごとにユーザーの所持金を設定する関数
+def set_balance(guild_id, user_id, amount):
+    if guild_id not in user_balances:
+        user_balances[guild_id] = {}
+    user_balances[guild_id][user_id] = amount
+    save_balances()
+
 # ユーザーの所持金を表示するコマンド
 @slash_command(name="balance", description="Displays your balance or the balance of a specified user", options=[
     {
@@ -47,8 +58,9 @@ async def on_ready():
 ])
 async def balance(ctx: ComponentContext, user=None):
     target_user = user or ctx.author
+    guild_id = str(ctx.guild_id)
     user_id = str(target_user.id)
-    balance = user_balances.get(user_id, 0)
+    balance = get_balance(guild_id, user_id)
     await ctx.send(f'{target_user.mention}さんの所持金は {balance} VTD です。')
 
 # 通貨の受け渡しを行うコマンド
@@ -71,6 +83,7 @@ async def pay(ctx: ComponentContext, amount: int, member):
         await ctx.send('金額は正の整数でなければなりません。')
         return
     
+    guild_id = str(ctx.guild_id)
     giver_id = str(ctx.author.id)
     receiver_id = str(member.id)
     
@@ -78,13 +91,12 @@ async def pay(ctx: ComponentContext, amount: int, member):
         await ctx.send('自分自身にお金を渡すことはできません。')
         return
 
-    if user_balances.get(giver_id, 0) < amount:
+    if get_balance(guild_id, giver_id) < amount:
         await ctx.send('所持金が不足しています。')
         return
     
-    user_balances[giver_id] = user_balances.get(giver_id, 0) - amount
-    user_balances[receiver_id] = user_balances.get(receiver_id, 0) + amount
-    save_balances()
+    set_balance(guild_id, giver_id, get_balance(guild_id, giver_id) - amount)
+    set_balance(guild_id, receiver_id, get_balance(guild_id, receiver_id) + amount)
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を渡しました。')
 
@@ -130,9 +142,9 @@ async def give(ctx: ComponentContext, amount: int, member):
         await ctx.send('金額は正の整数でなければなりません。')
         return
     
+    guild_id = str(ctx.guild_id)
     user_id = str(member.id)
-    user_balances[user_id] = user_balances.get(user_id, 0) + amount
-    save_balances()
+    set_balance(guild_id, user_id, get_balance(guild_id, user_id) + amount)
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を与えました。')
 
@@ -156,13 +168,13 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
         await ctx.send('金額は正の整数でなければなりません。')
         return
     
+    guild_id = str(ctx.guild_id)
     user_id = str(member.id)
-    if user_balances.get(user_id, 0) < amount:
+    if get_balance(guild_id, user_id) < amount:
         await ctx.send('対象ユーザーの所持金が不足しています。')
         return
     
-    user_balances[user_id] = user_balances.get(user_id, 0) - amount
-    save_balances()
+    set_balance(guild_id, user_id, get_balance(guild_id, user_id) - amount)
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
 
