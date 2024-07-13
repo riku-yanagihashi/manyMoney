@@ -35,7 +35,7 @@ user_balances = load_balances()
 # ボットが起動したときの処理
 @bot.listen()
 async def on_ready():
-    print(f'Logged in as {bot.me.name}')
+    print(f'Logged in as {bot.user.username}')
 
 # サーバーごとにユーザーの所持金を取得する関数
 def get_balance(guild_id, user_id):
