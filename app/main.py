@@ -1,5 +1,6 @@
 import json
 from interactions import Client, Intents, ComponentContext, slash_command
+from server import server_thread
 
 # token.txtファイルからトークンを読み込む
 with open('token.txt', 'r') as file:
@@ -179,4 +180,5 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
 
 # Botの起動とDiscordサーバーへの接続
+server_thread()
 bot.start()

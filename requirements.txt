@@ -1,0 +1,6 @@
+discord-py-interactions==5.13.1
+discord-typings==0.9.0
+fastapi==0.110.1
+uvicorn==0.29.0
+
+
