@@ -1,9 +1,26 @@
+import json
 from interactions import Client, Intents, ComponentContext, slash_command
 
 # token.txtファイルからトークンを読み込む
 with open('token.txt', 'r') as file:
     TOKEN = file.read().strip()
 
+BALANCES_FILE = 'balances.json'
+
+# 所持金データを読み込む関数
+def load_balances():
+    try:
+        with open(BALANCES_FILE, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        return {}
+
+# 所持金データを保存する関数
+def save_balances():
+    with open(BALANCES_FILE, 'w') as file:
+        json.dump(user_balances, file)
 
 # インテントの設定
 intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
@@ -12,7 +29,7 @@ intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
 bot = Client(token=TOKEN, intents=intents)
 
 # ユーザーの所持金を管理する辞書
-user_balances = {}
+user_balances = load_balances()
 
 # ボットが起動したときの処理
 @bot.event
@@ -67,6 +84,7 @@ async def pay(ctx: ComponentContext, amount: int, member):
     
     user_balances[giver_id] = user_balances.get(giver_id, 0) - amount
     user_balances[receiver_id] = user_balances.get(receiver_id, 0) + amount
+    save_balances()
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を渡しました。')
 
@@ -114,6 +132,7 @@ async def give(ctx: ComponentContext, amount: int, member):
     
     user_id = str(member.id)
     user_balances[user_id] = user_balances.get(user_id, 0) + amount
+    save_balances()
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を与えました。')
 
@@ -143,6 +162,7 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
         return
     
     user_balances[user_id] = user_balances.get(user_id, 0) - amount
+    save_balances()
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
 
