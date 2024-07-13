@@ -7,6 +7,7 @@ from server import server_thread
 TOKEN = os.environ.get("TOKEN")
 
 BALANCES_FILE = 'balances.json'
+ADMIN_USER_IDS = ["123456789012345678", "987654321098765432"]  # 管理者ユーザーのIDをリストに追加
 
 # 所持金データを読み込む関数
 def load_balances():
@@ -139,6 +140,10 @@ async def request(ctx: ComponentContext, amount: int, member):
     }
 ])
 async def give(ctx: ComponentContext, amount: int, member):
+    if str(ctx.author.id) not in ADMIN_USER_IDS:
+        await ctx.send('このコマンドを実行する権限がありません。')
+        return
+    
     if amount <= 0:
         await ctx.send('金額は正の整数でなければなりません。')
         return
@@ -165,6 +170,10 @@ async def give(ctx: ComponentContext, amount: int, member):
     }
 ])
 async def confiscation(ctx: ComponentContext, amount: int, member):
+    if str(ctx.author.id) not in ADMIN_USER_IDS:
+        await ctx.send('このコマンドを実行する権限がありません。')
+        return
+    
     if amount <= 0:
         await ctx.send('金額は正の整数でなければなりません。')
         return
@@ -181,7 +190,7 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
 
 async def main():
     server_thread()
-    await bot.astart()  # bot.start() -> bot.astart() に変更
+    await bot.astart()
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
