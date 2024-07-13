@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.12
 WORKDIR /app
 
 # 日本語ロケールとタイムゾーンの設定
@@ -11,9 +11,9 @@ ENV TZ Asia/Tokyo
 ENV TERM xterm
 
 # pip install
-COPY requirements.txt /bot/
+COPY requirements.txt /app/
 RUN pip install -r requirements.txt
-COPY . /bot
+COPY .app /app
 
 # ポート開放 (uvicornで指定したポート)
 EXPOSE 8079
