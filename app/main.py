@@ -1,11 +1,10 @@
 import json
+import os
 import asyncio
 from interactions import Client, Intents, ComponentContext, slash_command
 from server import server_thread
 
-# token.txtファイルからトークンを読み込む
-with open('token.txt', 'r') as file:
-    TOKEN = file.read().strip()
+TOKEN = os.environ.get("TOKEN")
 
 BALANCES_FILE = 'balances.json'
 
