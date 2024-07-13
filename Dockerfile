@@ -13,7 +13,7 @@ ENV TERM xterm
 # pip install
 COPY requirements.txt /app/
 RUN pip install -r requirements.txt
-COPY .app /app
+COPY . /app
 
 # ポート開放 (uvicornで指定したポート)
 EXPOSE 8079
