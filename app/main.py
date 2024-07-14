@@ -5,19 +5,22 @@ from interactions import Client, Intents, ComponentContext, slash_command, Membe
 from server import server_thread
 
 TOKEN = os.getenv("TOKEN")
-
 DB_FILE = os.getenv("DB")
 
 # SQL文を実行する関数
-def execute(sql: str, params=()):
+def execute(sql: str, params=(), fetch=False):
     conn = psycopg2.connect(DB_FILE)
     cur = conn.cursor()
     try:
         cur.execute(sql, params)
-        data = cur.fetchall()
+        if fetch:
+            data = cur.fetchall()
+        else:
+            data = None
         conn.commit()
     except Exception as e:
-        raise(e)
+        conn.rollback()
+        raise e
     finally:
         cur.close()
         conn.close()
@@ -30,7 +33,7 @@ execute('CREATE TABLE IF NOT EXISTS admins(guildid INTEGER, userid INTEGER, PRIM
 # 所持金データを読み込む関数
 def get_balance(guildid, userid):
     try:
-        getdata = execute('SELECT balance FROM balances WHERE guildid=? AND userid=?', (guildid, userid))[0][0]
+        getdata = execute('SELECT balance FROM balances WHERE guildid=%s AND userid=%s', (guildid, userid), fetch=True)[0][0]
     except IndexError:
         getdata = 0
     return getdata
@@ -38,19 +41,19 @@ def get_balance(guildid, userid):
 # 所持金データを保存する関数
 def set_balance(guildid, userid, balance):
     try:
-        execute('INSERT INTO balances(guildid, userid, balance) VALUES(?, ?, ?)', (guildid, userid, balance))
+        execute('INSERT INTO balances(guildid, userid, balance) VALUES(%s, %s, %s)', (guildid, userid, balance))
     except psycopg2.IntegrityError:
-        execute('UPDATE balances SET balance = ? WHERE guildid = ? AND userid = ?', (balance, guildid, userid))
+        execute('UPDATE balances SET balance = %s WHERE guildid = %s AND userid = %s', (balance, guildid, userid))
 
 # 管理者ユーザーIDを読み込む関数
 def get_admin_user_ids(guildid):
-    data = [c[0] for c in execute('SELECT userid FROM admins WHERE guildid=?', (guildid,))]
+    data = [c[0] for c in execute('SELECT userid FROM admins WHERE guildid=%s', (guildid,), fetch=True)]
     return data
 
 # 管理者ユーザーIDを保存する関数
 def save_admin_user_id(guildid, userid):
     if userid not in get_admin_user_ids(guildid):
-        execute('INSERT INTO admins(guildid, userid) VALUES(?, ?)', (guildid, userid))
+        execute('INSERT INTO admins(guildid, userid) VALUES(%s, %s)', (guildid, userid))
 
 # インテントの設定
 intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
@@ -97,7 +100,7 @@ async def balance(ctx: ComponentContext):
 ])
 async def pay(ctx: ComponentContext, amount: int, member: Member):
     if amount <= 0:
-        await ctx.send('金額は正の整数でなければなりません。')
+        await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
     guild_id = str(ctx.guild_id)
@@ -105,17 +108,17 @@ async def pay(ctx: ComponentContext, amount: int, member: Member):
     receiver_id = str(member.id)
     
     if giver_id == receiver_id:
-        await ctx.send('自分自身にお金を渡すことはできません。')
+        await ctx.send('自分自身にお金を渡すことはできません。', ephemeral=True)
         return
 
     if get_balance(guild_id, giver_id) < amount:
-        await ctx.send('所持金が不足しています。')
+        await ctx.send('所持金が不足しています。', ephemeral=True)
         return
     
     set_balance(guild_id, giver_id, get_balance(guild_id, giver_id) - amount)
     set_balance(guild_id, receiver_id, get_balance(guild_id, receiver_id) + amount)
 
-    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を渡しました。')
+    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を渡しました。', ephemeral=True)
 
 # 通貨の請求を行うコマンド
 @slash_command(name="request", description="Request VTD from another user", options=[
@@ -134,10 +137,10 @@ async def pay(ctx: ComponentContext, amount: int, member: Member):
 ])
 async def request(ctx: ComponentContext, amount: int, member: Member):
     if amount <= 0:
-        await ctx.send('金額は正の整数でなければなりません。')
+        await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
-    await ctx.send(f'{member.mention} さん、{ctx.author.mention} さんから {amount} VTD の請求がありました。')
+    await ctx.send(f'{member.mention} さん、{ctx.author.mention} さんから {amount} VTD の請求がありました。', ephemeral=True)
 
 # 管理者がユーザーに通貨を与えるコマンド
 @slash_command(name="give", description="Give VTD to a user (Admin only)", options=[
@@ -156,18 +159,18 @@ async def request(ctx: ComponentContext, amount: int, member: Member):
 ])
 async def give(ctx: ComponentContext, amount: int, member: Member):
     if not is_admin(ctx.guild_id, ctx.author.id):
-        await ctx.send('このコマンドを実行する権限がありません。')
+        await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
         return
     
     if amount <= 0:
-        await ctx.send('金額は正の整数でなければなりません。')
+        await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
     guild_id = str(ctx.guild_id)
     user_id = str(member.id)
     set_balance(guild_id, user_id, get_balance(guild_id, user_id) + amount)
 
-    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を与えました。')
+    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を与えました。', ephemeral=True)
 
 # 管理者がユーザーから通貨を押収するコマンド
 @slash_command(name="confiscation", description="Confiscate VTD from a user (Admin only)", options=[
@@ -186,22 +189,22 @@ async def give(ctx: ComponentContext, amount: int, member: Member):
 ])
 async def confiscation(ctx: ComponentContext, amount: int, member: Member):
     if not is_admin(ctx.guild_id, ctx.author.id):
-        await ctx.send('このコマンドを実行する権限がありません。')
+        await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
         return
     
     if amount <= 0:
-        await ctx.send('金額は正の整数でなければなりません。')
+        await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
     guild_id = str(ctx.guild_id)
     user_id = str(member.id)
     if get_balance(guild_id, user_id) < amount:
-        await ctx.send('対象ユーザーの所持金が不足しています。')
+        await ctx.send('対象ユーザーの所持金が不足しています。', ephemeral=True)
         return
     
     set_balance(guild_id, user_id, get_balance(guild_id, user_id) - amount)
 
-    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
+    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。', ephemeral=True)
 
 # 管理者を追加するコマンド（サーバー主のみ実行可能）
 @slash_command(name="add_admin", description="Add a user as an admin", options=[
@@ -215,15 +218,15 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
 async def add_admin(ctx: ComponentContext, user: Member):
     guild_owner_id = get_guild_owner(ctx.guild_id)
     if str(ctx.author.id) != str(guild_owner_id):
-        await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。')
+        await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。', ephemeral=True)
         return
 
     user_id = user.id
     if user_id not in get_admin_user_ids(ctx.guild_id):
         save_admin_user_id(ctx.guild_id, user_id)
-        await ctx.send(f'{user.mention} さんが管理者として追加されました。')
+        await ctx.send(f'{user.mention} さんが管理者として追加されました。', ephemeral=True)
     else:
-        await ctx.send(f'{user.mention} さんは既に管理者です。')
+        await ctx.send(f'{user.mention} さんは既に管理者です。', ephemeral=True)
 
 async def main():
     server_thread()
