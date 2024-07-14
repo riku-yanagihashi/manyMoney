@@ -75,8 +75,8 @@ def is_admin(guildid, userid):
 # ユーザーの所持金を表示するコマンド
 @slash_command(name="balance", description="Displays your balance")
 async def balance(ctx: ComponentContext):
-    guild_id = str(ctx.guild_id)
-    user_id = str(ctx.author.id)
+    guild_id = int(ctx.guild_id)
+    user_id = int(ctx.author.id)
     balance = get_balance(guild_id, user_id)
     await ctx.send(f'{ctx.author.mention}さんの所持金は {balance} VTD です。', ephemeral=True)
 
@@ -100,9 +100,9 @@ async def pay(ctx: ComponentContext, amount: int, member: Member):
         await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
-    guild_id = str(ctx.guild_id)
-    giver_id = str(ctx.author.id)
-    receiver_id = str(member.id)
+    guild_id = int(ctx.guild_id)
+    giver_id = int(ctx.author.id)
+    receiver_id = int(member.id)
     
     if giver_id == receiver_id:
         await ctx.send('自分自身にお金を渡すことはできません。', ephemeral=True)
@@ -155,7 +155,7 @@ async def request(ctx: ComponentContext, amount: int, member: Member):
     }
 ])
 async def give(ctx: ComponentContext, amount: int, member: Member):
-    if not is_admin(ctx.guild_id, ctx.author.id):
+    if not is_admin(int(ctx.guild_id), int(ctx.author.id)):
         await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
         return
     
@@ -163,8 +163,8 @@ async def give(ctx: ComponentContext, amount: int, member: Member):
         await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
-    guild_id = str(ctx.guild_id)
-    user_id = str(member.id)
+    guild_id = int(ctx.guild_id)
+    user_id = int(member.id)
     set_balance(guild_id, user_id, get_balance(guild_id, user_id) + amount)
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を与えました。', ephemeral=True)
@@ -185,7 +185,7 @@ async def give(ctx: ComponentContext, amount: int, member: Member):
     }
 ])
 async def confiscation(ctx: ComponentContext, amount: int, member: Member):
-    if not is_admin(ctx.guild_id, ctx.author.id):
+    if not is_admin(int(ctx.guild_id), int(ctx.author.id)):
         await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
         return
     
@@ -193,8 +193,8 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
         await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
-    guild_id = str(ctx.guild_id)
-    user_id = str(member.id)
+    guild_id = int(ctx.guild_id)
+    user_id = int(member.id)
     if get_balance(guild_id, user_id) < amount:
         await ctx.send('対象ユーザーの所持金が不足しています。', ephemeral=True)
         return
@@ -213,14 +213,14 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
     }
 ])
 async def add_admin(ctx: ComponentContext, user: Member):
-    guild_owner_id = get_guild_owner(ctx.guild_id)
+    guild_owner_id = get_guild_owner(int(ctx.guild_id))
     if str(ctx.author.id) != str(guild_owner_id):
         await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。', ephemeral=True)
         return
 
-    user_id = user.id
-    if user_id not in get_admin_user_ids(ctx.guild_id):
-        save_admin_user_id(ctx.guild_id, user_id)
+    user_id = int(user.id)
+    if user_id not in get_admin_user_ids(int(ctx.guild_id)):
+        save_admin_user_id(int(ctx.guild_id), user_id)
         await ctx.send(f'{user.mention} さんが管理者として追加されました。', ephemeral=True)
     else:
         await ctx.send(f'{user.mention} さんは既に管理者です。', ephemeral=True)
