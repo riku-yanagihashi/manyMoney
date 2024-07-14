@@ -1,43 +1,58 @@
-import json
 import os
 import asyncio
-from interactions import Client, Intents, ComponentContext, slash_command
+import sqlite3
+from interactions import Client, Intents, ComponentContext, slash_command, Member
 from server import server_thread
 
 TOKEN = os.environ.get("TOKEN")
 
-BALANCES_FILE = 'balances.json'
-ADMIN_USER_IDS_FILE = 'admin_user_ids.json'
+
+DB_FILE = 'MoneyData.db'
+
+
+# sql文を実行する関数
+def execute(sql:str):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    try:
+        data = cur.execute(sql).fetchall()
+        conn.commit()
+    except Exception as e:
+        raise(e)
+    finally:
+        cur.close()
+        conn.close()
+    return data
+
+# テーブルの作成
+execute('CREATE TABLE IF NOT EXISTS balances(guildid INTEGER, userid INTEGER, balance INTEGER, PRIMARY KEY(guildid, userid))')
+execute('CREATE TABLE IF NOT EXISTS admins(guildid INTEGER, userid INTEGER, PRIMARY KEY(guildid, userid))')
+
 
 # 所持金データを読み込む関数
-def load_balances():
+def get_balance(guildid, userid):
     try:
-        with open(BALANCES_FILE, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        return {}
+        getdata = execute(f'SELECT balance FROM balances WHERE guildid={guildid} AND userid={userid}')[0][0]
+    except IndexError:
+        getdata = 0
+    return getdata
 
 # 所持金データを保存する関数
-def save_balances():
-    with open(BALANCES_FILE, 'w') as file:
-        json.dump(user_balances, file)
+def set_balance(guildid, userid, balance):
+    try:
+        execute(f'INSERT INTO balances(guildid, userid, balance) VALUES({guildid}, {userid}, {balance})')
+    except sqlite3.IntegrityError:
+        execute(f'UPDATE balances SET balance = {balance} WHERE guildid = {guildid} AND userid = {userid}')
 
 # 管理者ユーザーIDを読み込む関数
-def load_admin_user_ids():
-    try:
-        with open(ADMIN_USER_IDS_FILE, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []
-    except json.JSONDecodeError:
-        return []
+def get_admin_user_ids(guildid):
+    data = [c[0] for c in execute(f'SELECT userid FROM admins WHERE guildid={guildid}')]
+    return data
 
 # 管理者ユーザーIDを保存する関数
-def save_admin_user_ids():
-    with open(ADMIN_USER_IDS_FILE, 'w') as file:
-        json.dump(admin_user_ids, file)
+def save_admin_user_id(guildid, userid):
+    data = execute(f'INSERT INTO admins(guildid, userid) VALUES({guildid}, {userid})')
+    return data
 
 # インテントの設定
 intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
@@ -45,30 +60,19 @@ intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
 # 接続に必要なオブジェクトを生成
 bot = Client(token=TOKEN, intents=intents)
 
-# ユーザーの所持金を管理する辞書
-user_balances = load_balances()
-admin_user_ids = load_admin_user_ids()
-
 # ボットが起動したときの処理
 @bot.listen()
 async def on_ready():
     print(f'Logged in as {bot.user.username}')
 
-# サーバーごとにユーザーの所持金を取得する関数
-def get_balance(guild_id, user_id):
-    return user_balances.get(guild_id, {}).get(user_id, 0)
-
-# サーバーごとにユーザーの所持金を設定する関数
-def set_balance(guild_id, user_id, amount):
-    if guild_id not in user_balances:
-        user_balances[guild_id] = {}
-    user_balances[guild_id][user_id] = amount
-    save_balances()
-
 # サーバー主を特定する関数
 def get_guild_owner(guild_id):
     guild = bot.get_guild(guild_id)
     return guild._owner_id
+
+# 管理者ユーザーかを判定する関数
+def is_admin(guildid, userid):
+    return userid in get_admin_user_ids(guildid) or get_guild_owner(guildid) == userid
 
 # ユーザーの所持金を表示するコマンド
 @slash_command(name="balance", description="Displays your balance or the balance of a specified user", options=[
@@ -101,7 +105,7 @@ async def balance(ctx: ComponentContext, user=None):
         "required": True
     }
 ])
-async def pay(ctx: ComponentContext, amount: int, member):
+async def pay(ctx: ComponentContext, amount: int, member: Member):
     if amount <= 0:
         await ctx.send('金額は正の整数でなければなりません。')
         return
@@ -138,7 +142,7 @@ async def pay(ctx: ComponentContext, amount: int, member):
         "required": True
     }
 ])
-async def request(ctx: ComponentContext, amount: int, member):
+async def request(ctx: ComponentContext, amount: int, member: Member):
     if amount <= 0:
         await ctx.send('金額は正の整数でなければなりません。')
         return
@@ -160,8 +164,8 @@ async def request(ctx: ComponentContext, amount: int, member):
         "required": True
     }
 ])
-async def give(ctx: ComponentContext, amount: int, member):
-    if str(ctx.author.id) not in admin_user_ids:
+async def give(ctx: ComponentContext, amount: int, member: Member):
+    if not is_admin(ctx.guild_id, ctx.author.id):
         await ctx.send('このコマンドを実行する権限がありません。')
         return
     
@@ -190,8 +194,8 @@ async def give(ctx: ComponentContext, amount: int, member):
         "required": True
     }
 ])
-async def confiscation(ctx: ComponentContext, amount: int, member):
-    if str(ctx.author.id) not in admin_user_ids:
+async def confiscation(ctx: ComponentContext, amount: int, member: Member):
+    if not is_admin(ctx.guild_id, ctx.author.id):
         await ctx.send('このコマンドを実行する権限がありません。')
         return
     
@@ -218,16 +222,15 @@ async def confiscation(ctx: ComponentContext, amount: int, member):
         "required": True
     }
 ])
-async def add_admin(ctx: ComponentContext, user):
+async def add_admin(ctx: ComponentContext, user: Member):
     guild_owner_id = get_guild_owner(ctx.guild_id)
     if str(ctx.author.id) != str(guild_owner_id):
         await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。')
         return
-    
-    user_id = str(user.id)
-    if user_id not in admin_user_ids:
-        admin_user_ids.append(user_id)
-        save_admin_user_ids()
+    print(user)
+    user_id = user.id
+    if user_id not in get_admin_user_ids(ctx.guild_id):
+        save_admin_user_id(ctx.guild_id, ctx.user.id)
         await ctx.send(f'{user.mention} さんが管理者として追加されました。')
     else:
         await ctx.send(f'{user.mention} さんは既に管理者です。')
@@ -235,6 +238,7 @@ async def add_admin(ctx: ComponentContext, user):
 async def main():
     server_thread()
     await bot.astart()  # bot.start() -> bot.astart() に変更
+
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
