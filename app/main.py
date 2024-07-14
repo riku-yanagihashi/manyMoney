@@ -5,18 +5,18 @@ from interactions import Client, Intents, ComponentContext, slash_command, Membe
 from server import server_thread
 
 TOKEN = os.getenv("TOKEN")
-DB_FILE = os.getenv("DB")
+DB_DSN = os.getenv("DB")
 
 # SQL文を実行する関数
-def execute(sql: str, params=(), fetch=False):
-    conn = psycopg2.connect(DB_FILE)
+def execute(sql_query: str, params=(), fetch=False):
+    conn = psycopg2.connect(DB_DSN)
     cur = conn.cursor()
     try:
-        cur.execute(sql, params)
+        cur.execute(sql_query, params)
         if fetch:
             data = cur.fetchall()
         else:
-            data = None
+            data = []
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -27,21 +27,18 @@ def execute(sql: str, params=(), fetch=False):
     return data
 
 # テーブルの作成
-execute('CREATE TABLE IF NOT EXISTS balances(guildid INTEGER, userid INTEGER, balance INTEGER, PRIMARY KEY(guildid, userid))')
-execute('CREATE TABLE IF NOT EXISTS admins(guildid INTEGER, userid INTEGER, PRIMARY KEY(guildid, userid))')
+execute('CREATE TABLE IF NOT EXISTS balances (guildid BIGINT, userid BIGINT, balance INTEGER, PRIMARY KEY(guildid, userid))')
+execute('CREATE TABLE IF NOT EXISTS admins (guildid BIGINT, userid BIGINT, PRIMARY KEY(guildid, userid))')
 
 # 所持金データを読み込む関数
 def get_balance(guildid, userid):
-    try:
-        getdata = execute('SELECT balance FROM balances WHERE guildid=%s AND userid=%s', (guildid, userid), fetch=True)[0][0]
-    except IndexError:
-        getdata = 0
-    return getdata
+    result = execute('SELECT balance FROM balances WHERE guildid=%s AND userid=%s', (guildid, userid), fetch=True)
+    return result[0][0] if result else 0
 
 # 所持金データを保存する関数
 def set_balance(guildid, userid, balance):
     try:
-        execute('INSERT INTO balances(guildid, userid, balance) VALUES(%s, %s, %s)', (guildid, userid, balance))
+        execute('INSERT INTO balances (guildid, userid, balance) VALUES (%s, %s, %s)', (guildid, userid, balance))
     except psycopg2.IntegrityError:
         execute('UPDATE balances SET balance = %s WHERE guildid = %s AND userid = %s', (balance, guildid, userid))
 
@@ -53,7 +50,7 @@ def get_admin_user_ids(guildid):
 # 管理者ユーザーIDを保存する関数
 def save_admin_user_id(guildid, userid):
     if userid not in get_admin_user_ids(guildid):
-        execute('INSERT INTO admins(guildid, userid) VALUES(%s, %s)', (guildid, userid))
+        execute('INSERT INTO admins (guildid, userid) VALUES (%s, %s)', (guildid, userid))
 
 # インテントの設定
 intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
