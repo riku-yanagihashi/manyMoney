@@ -1,1 +1,6 @@
 token.txt
+MoneyData.db
+app/__pycache__
+balances.json
+admin_user_ids.json
+.venv
