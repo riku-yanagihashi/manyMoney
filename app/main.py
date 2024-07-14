@@ -4,7 +4,7 @@ import sqlite3
 from interactions import Client, Intents, ComponentContext, slash_command, Member
 from server import server_thread
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+TOKEN = os.getenv("TOKEN")
 
 DB_FILE = 'MoneyData.db'
 
