@@ -4,18 +4,16 @@ import sqlite3
 from interactions import Client, Intents, ComponentContext, slash_command, Member
 from server import server_thread
 
-TOKEN = os.environ.get("TOKEN")
-
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 DB_FILE = 'MoneyData.db'
 
-
-# sql文を実行する関数
-def execute(sql:str):
+# SQL文を実行する関数
+def execute(sql: str, params=()):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     try:
-        data = cur.execute(sql).fetchall()
+        data = cur.execute(sql, params).fetchall()
         conn.commit()
     except Exception as e:
         raise(e)
@@ -28,11 +26,10 @@ def execute(sql:str):
 execute('CREATE TABLE IF NOT EXISTS balances(guildid INTEGER, userid INTEGER, balance INTEGER, PRIMARY KEY(guildid, userid))')
 execute('CREATE TABLE IF NOT EXISTS admins(guildid INTEGER, userid INTEGER, PRIMARY KEY(guildid, userid))')
 
-
 # 所持金データを読み込む関数
 def get_balance(guildid, userid):
     try:
-        getdata = execute(f'SELECT balance FROM balances WHERE guildid={guildid} AND userid={userid}')[0][0]
+        getdata = execute('SELECT balance FROM balances WHERE guildid=? AND userid=?', (guildid, userid))[0][0]
     except IndexError:
         getdata = 0
     return getdata
@@ -40,19 +37,19 @@ def get_balance(guildid, userid):
 # 所持金データを保存する関数
 def set_balance(guildid, userid, balance):
     try:
-        execute(f'INSERT INTO balances(guildid, userid, balance) VALUES({guildid}, {userid}, {balance})')
+        execute('INSERT INTO balances(guildid, userid, balance) VALUES(?, ?, ?)', (guildid, userid, balance))
     except sqlite3.IntegrityError:
-        execute(f'UPDATE balances SET balance = {balance} WHERE guildid = {guildid} AND userid = {userid}')
+        execute('UPDATE balances SET balance = ? WHERE guildid = ? AND userid = ?', (balance, guildid, userid))
 
 # 管理者ユーザーIDを読み込む関数
 def get_admin_user_ids(guildid):
-    data = [c[0] for c in execute(f'SELECT userid FROM admins WHERE guildid={guildid}')]
+    data = [c[0] for c in execute('SELECT userid FROM admins WHERE guildid=?', (guildid,))]
     return data
 
 # 管理者ユーザーIDを保存する関数
 def save_admin_user_id(guildid, userid):
-    data = execute(f'INSERT INTO admins(guildid, userid) VALUES({guildid}, {userid})')
-    return data
+    if userid not in get_admin_user_ids(guildid):
+        execute('INSERT INTO admins(guildid, userid) VALUES(?, ?)', (guildid, userid))
 
 # インテントの設定
 intents = Intents.DEFAULT | Intents.GUILD_MEMBERS
@@ -227,10 +224,10 @@ async def add_admin(ctx: ComponentContext, user: Member):
     if str(ctx.author.id) != str(guild_owner_id):
         await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。')
         return
-    print(user)
+
     user_id = user.id
     if user_id not in get_admin_user_ids(ctx.guild_id):
-        save_admin_user_id(ctx.guild_id, ctx.user.id)
+        save_admin_user_id(ctx.guild_id, user_id)
         await ctx.send(f'{user.mention} さんが管理者として追加されました。')
     else:
         await ctx.send(f'{user.mention} さんは既に管理者です。')
@@ -238,7 +235,6 @@ async def add_admin(ctx: ComponentContext, user: Member):
 async def main():
     server_thread()
     await bot.astart()  # bot.start() -> bot.astart() に変更
-
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
