@@ -1,1 +1,4 @@
 token.txt
+MoneyData.db
+pyvenv.cfg
+app/__pycache__
