@@ -1,19 +1,20 @@
 import os
 import asyncio
-import sqlite3
+import psycopg2
 from interactions import Client, Intents, ComponentContext, slash_command, Member
 from server import server_thread
 
 TOKEN = os.getenv("TOKEN")
 
-DB_FILE = 'MoneyData.db'
+DB_FILE = os.getenv("DB")
 
 # SQL文を実行する関数
 def execute(sql: str, params=()):
-    conn = sqlite3.connect(DB_FILE)
+    conn = psycopg2.connect(DB_FILE)
     cur = conn.cursor()
     try:
-        data = cur.execute(sql, params).fetchall()
+        cur.execute(sql, params)
+        data = cur.fetchall()
         conn.commit()
     except Exception as e:
         raise(e)
@@ -38,7 +39,7 @@ def get_balance(guildid, userid):
 def set_balance(guildid, userid, balance):
     try:
         execute('INSERT INTO balances(guildid, userid, balance) VALUES(?, ?, ?)', (guildid, userid, balance))
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         execute('UPDATE balances SET balance = ? WHERE guildid = ? AND userid = ?', (balance, guildid, userid))
 
 # 管理者ユーザーIDを読み込む関数
