@@ -2,6 +2,7 @@ import os
 import asyncio
 import psycopg2
 import datetime
+import aiohttp
 from interactions import Client, Intents, ComponentContext, slash_command, Member, Button, ButtonStyle, listen, StringSelectMenu
 from interactions.api.events import Component
 from server import server_thread
@@ -411,9 +412,50 @@ async def admin_list(ctx: ComponentContext):
     
     await ctx.send(msg, ephemeral=True)
 
-# TODO: すべてのユーザーの金額をsetするコマンド(関数)を作成する (管理者用コマンド)
-# TODO: 借金制度を導入する可能性。必要なければ特に実装しない予定
-# TODO: pay,requestコマンドで支払われた側が支払われたことを確認できるようにする
+# すべてのユーザーの所持金をセットできるコマンド
+@slash_command(name="set_all_balances", description="Set the balance for all users in the server (Admin only)", options=[
+    {
+        "name": "amount",
+        "description": "Amount to set",
+        "type": 4,  # INTEGER
+        "required": True
+    }
+])
+async def set_all_balances(ctx: ComponentContext, amount: int):
+    await ctx.defer(ephemeral=True)
+
+    if not is_admin(int(ctx.guild_id), int(ctx.author.id)):
+        await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
+        return
+    
+    if amount < 0:
+        await ctx.send('金額は0以上でなければなりません。', ephemeral=True)
+        return
+
+    guild_id = ctx.guild_id
+    url = f"https://discord.com/api/v10/guilds/{guild_id}/members?limit=1000"
+    headers = {
+        "Authorization": f"Bot {TOKEN}"
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            if response.status != 200:
+                await ctx.send(f'メンバーの取得に失敗しました。ステータスコード: {response.status}', ephemeral=True)
+                return
+            
+            members = await response.json()
+
+    for member in members:
+        user_id = int(member["user"]["id"])
+        # balancesテーブルにユーザーが存在するか確認し、存在しない場合は新規に追加する
+        if get_balance(guild_id, user_id) == 0:
+            set_balance(guild_id, user_id, amount)
+        else:
+            execute('UPDATE balances SET balance = %s WHERE guildid = %s AND userid = %s', (amount, guild_id, user_id))
+
+    await ctx.send(f'すべてのユーザーの所持金が {amount} VTD に設定されました。', ephemeral=True)
+
 
 async def main():
     server_thread()
