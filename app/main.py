@@ -166,8 +166,9 @@ async def pay(ctx: ComponentContext, amount: int, member: Member):
     set_balance(guild_id, giver_id, get_balance(guild_id, giver_id) - amount)
     set_balance(guild_id, receiver_id, get_balance(guild_id, receiver_id) + amount)
 
-    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を渡しました。', ephemeral=True)
-    await bot.send(receiver_id, f'{ctx.author.mention} さんから {amount} VTD を受け取りました。')
+    # 支払ったユーザーにメッセージを送信
+    await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を渡しました。')
+    
 
 # 通貨の請求を行うコマンド
 @slash_command(name="request", description="Request VTD from another user", options=[
