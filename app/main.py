@@ -146,7 +146,7 @@ async def balance(ctx: ComponentContext, user=None):
     }
 ])
 async def pay(ctx: ComponentContext, amount: int, member: Member):
-    await ctx.defer(ephemeral=True)
+    await ctx.defer()
     if amount <= 0:
         await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
