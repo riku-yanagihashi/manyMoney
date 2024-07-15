@@ -392,6 +392,8 @@ async def add_admin(ctx: ComponentContext, user: Member):
 # 管理者表示だぜぃ
 @slash_command(name="admin_list", description="Displays the list of admins")
 async def admin_list(ctx: ComponentContext):
+    await ctx.defer(ephemeral=True) # 考え中みたいなやつ（多分）
+    
     guild_id = ctx.guild_id
     admin_ids = get_admin_user_ids(guild_id)
     admin_mentions = []
@@ -399,8 +401,17 @@ async def admin_list(ctx: ComponentContext):
         user = await bot.fetch_user(admin_id)
         if user:
             admin_mentions.append(user.mention)
-    msg = "現在の管理者:\n" + "\n".join(admin_mentions)
+    
+    if admin_mentions:
+        msg = "現在の管理者:\n" + "\n".join(admin_mentions)
+    else:
+        msg = "管理者が見つかりませんでした。"
+    
     await ctx.send(msg, ephemeral=True)
+
+# TODO: すべてのユーザーの金額をsetするコマンド(関数)を作成する (管理者用コマンド)
+# TODO: 借金制度を導入する可能性。必要なければ特に実装しない予定
+# TODO: pay,requestコマンドで支払われた側が支払われたことを確認できるようにする
 
 async def main():
     server_thread()
