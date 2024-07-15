@@ -127,7 +127,7 @@ async def balance(ctx: ComponentContext, user=None):
     guild_id = str(ctx.guild_id)
     user_id = str(target_user.id)
     balance = get_balance(guild_id, user_id)
-    await ctx.send(f'{target_user.mention}さんの所持金は {balance} VTD です。')
+    await ctx.send(f'{target_user.mention}さんの所持金は {balance} VTD です。', ephemeral=True)
 
     
 # 通貨の受け渡しを行うコマンド
@@ -388,6 +388,19 @@ async def add_admin(ctx: ComponentContext, user: Member):
         await ctx.send(f'{user.mention} さんが管理者として追加されました。', ephemeral=True)
     else:
         await ctx.send(f'{user.mention} さんは既に管理者です。', ephemeral=True)
+
+# 管理者表示だぜぃ
+@slash_command(name="admin_list", description="Displays the list of admins")
+async def admin_list(ctx: ComponentContext):
+    guild_id = ctx.guild_id
+    admin_ids = get_admin_user_ids(guild_id)
+    admin_mentions = []
+    for admin_id in admin_ids:
+        user = await bot.fetch_user(admin_id)
+        if user:
+            admin_mentions.append(user.mention)
+    msg = "現在の管理者:\n" + "\n".join(admin_mentions)
+    await ctx.send(msg, ephemeral=True)
 
 async def main():
     server_thread()
