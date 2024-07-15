@@ -103,7 +103,7 @@ bot = Client(token=TOKEN, intents=intents)
 # ボットが起動したときの処理
 @bot.listen()
 async def on_ready():
-    print(f'Logged in as {bot.user.username}')
+    print(f'ログイン成功 {bot.user.username}')
 
 # サーバー主を特定する関数
 def get_guild_owner(guild_id):
@@ -115,10 +115,10 @@ def is_admin(guildid, userid):
     return userid in get_admin_user_ids(guildid) or get_guild_owner(guildid) == userid
 
 # ユーザーの所持金を表示するコマンド
-@slash_command(name="balance", description="Displays your balance or the balance of a specified user", options=[
+@slash_command(name="balance", description="ユーザーの所持金を表示するコマンド。", options=[
     {
         "name": "user",
-        "description": "The user whose balance you want to see",
+        "description": "ユーザーを任意で指定することでそのユーザーの所持金を表示",
         "type": 6,  # USER
         "required": False
     }
@@ -132,16 +132,16 @@ async def balance(ctx: ComponentContext, user=None):
 
     
 # 通貨の受け渡しを行うコマンド
-@slash_command(name="pay", description="Pay VTD to another user", options=[
+@slash_command(name="pay", description="他の人にVTDを支払うことができるコマンド", options=[
     {
         "name": "amount",
-        "description": "Amount to pay",
+        "description": "金額を設定",
         "type": 4,  # INTEGER
         "required": True
     },
     {
         "name": "member",
-        "description": "Member to pay",
+        "description": "対象を指定",
         "type": 6,  # USER
         "required": True
     }
@@ -172,16 +172,16 @@ async def pay(ctx: ComponentContext, amount: int, member: Member):
     
 
 # 通貨の請求を行うコマンド
-@slash_command(name="request", description="Request VTD from another user", options=[
+@slash_command(name="request", description="他人にVTDを請求できる", options=[
     {
         "name": "amount",
-        "description": "Amount to request",
+        "description": "金額を設定",
         "type": 4,  # INTEGER
         "required": True
     },
     {
         "name": "member",
-        "description": "Member to request",
+        "description": "対象を指定",
         "type": 6,  # USER
         "required": True
     }
@@ -196,10 +196,10 @@ async def request(ctx: ComponentContext, amount: int, member: Member):
     await ctx.send(f'{member.mention} さん、{ctx.author.mention} さんから {amount} VTD の請求がありました。', components=button)
 
 # 請求の一覧を表示するコマンド
-@slash_command(name="show_requests", description="Displays your requests", options=[
+@slash_command(name="show_requests", description="請求の一覧を表示します", options=[
     {
         "name": "member",
-        "description": "Member to display",
+        "description": "対象を指定",
         "type": 6,  # INTEGER
         "required": False
     }
@@ -300,16 +300,16 @@ async def on_component(event: Component):
             await ctx.send(content=f"既に支払い済みです。")
 
 # 管理者がユーザーに通貨を与えるコマンド
-@slash_command(name="give", description="Give VTD to a user (Admin only)", options=[
+@slash_command(name="give", description="ユーザーにVTDを与えることができる(管理者専用))", options=[
     {
         "name": "amount",
-        "description": "Amount to give",
+        "description": "金額を設定",
         "type": 4,  # INTEGER
         "required": True
     },
     {
         "name": "member",
-        "description": "Member to give",
+        "description": "対象を指定",
         "type": 6,  # USER
         "required": True
     }
@@ -333,16 +333,16 @@ async def give(ctx: ComponentContext, amount: int, member: Member):
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんに {amount} VTD を与えました。')
 
 # 管理者がユーザーから通貨を押収するコマンド
-@slash_command(name="confiscation", description="Confiscate VTD from a user (Admin only)", options=[
+@slash_command(name="confiscation", description="ユーザーからVTDを押収するコマンド", options=[
     {
         "name": "amount",
-        "description": "Amount to confiscate",
+        "description": "金額を設定",
         "type": 4,  # INTEGER
         "required": True
     },
     {
         "name": "member",
-        "description": "Member to confiscate from",
+        "description": "対象を設定",
         "type": 6,  # USER
         "required": True
     }
@@ -371,10 +371,10 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
 
 # 管理者を追加するコマンド（サーバー主のみ実行可能）
-@slash_command(name="add_admin", description="Add a user as an admin", options=[
+@slash_command(name="add_admin", description="このアプリの管理者権限ユーザーを設定します", options=[
     {
         "name": "user",
-        "description": "The user to add as admin",
+        "description": "対象を指定",
         "type": 6,  # USER
         "required": True
     }
@@ -393,7 +393,7 @@ async def add_admin(ctx: ComponentContext, user: Member):
         await ctx.send(f'{user.mention} さんは既に管理者です。', ephemeral=True)
 
 # 管理者表示だぜぃ
-@slash_command(name="admin_list", description="Displays the list of admins")
+@slash_command(name="admin_list", description="管理者リストを表示")
 async def admin_list(ctx: ComponentContext):
     await ctx.defer(ephemeral=True) # 考え中みたいなやつ（多分）
     
@@ -413,10 +413,10 @@ async def admin_list(ctx: ComponentContext):
     await ctx.send(msg, ephemeral=True)
 
 # すべてのユーザーの所持金をセットできるコマンド
-@slash_command(name="set_all_balances", description="Set the balance for all users in the server (Admin only)", options=[
+@slash_command(name="set_all_balances", description="すべてのユーザーの所持金を設定できる", options=[
     {
         "name": "amount",
-        "description": "Amount to set",
+        "description": "金額を設定",
         "type": 4,  # INTEGER
         "required": True
     }
