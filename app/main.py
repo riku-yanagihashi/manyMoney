@@ -9,21 +9,25 @@ DB_DSN = os.getenv("DB")
 
 # SQL文を実行する関数
 def execute(sql_query: str, params=(), fetch=False):
-    conn = psycopg2.connect(DB_DSN)
-    cur = conn.cursor()
     try:
-        cur.execute(sql_query, params)
-        if fetch:
-            data = cur.fetchall()
-        else:
-            data = []
-        conn.commit()
+        conn = psycopg2.connect(DB_DSN)
+        cur = conn.cursor()
+        try:
+            cur.execute(sql_query, params)
+            if fetch:
+                data = cur.fetchall()
+            else:
+                data = []
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cur.close()
+            conn.close()
     except Exception as e:
-        conn.rollback()
+        print(f"Database connection error: {e}")
         raise e
-    finally:
-        cur.close()
-        conn.close()
     return data
 
 # テーブルの作成
@@ -214,7 +218,7 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
 ])
 async def add_admin(ctx: ComponentContext, user: Member):
     guild_owner_id = get_guild_owner(int(ctx.guild_id))
-    if str(ctx.author.id) != str(guild_owner_id):
+    if int(ctx.author.id) != int(guild_owner_id):
         await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。', ephemeral=True)
         return
 
