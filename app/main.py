@@ -236,14 +236,14 @@ async def on_component(event: Component):
     ctx = event.ctx
     
     if ctx.custom_id.startswith("pay_now:"):
-        await ctx.defer(ephemeral=True)
+        await ctx.defer()
         request_id = int(ctx.custom_id.split(":")[1].split(",")[0])
         billed_user_id = int(ctx.custom_id.split(":")[1].split(",")[1])
         if ctx.author_id == billed_user_id:
             if not get_balance(ctx.guild_id, billed_user_id) < get_pay(request_id)[3]:
                 try:
                     pay_request(request_id)
-                    await ctx.send('請求が正常に支払われました。', ephemeral=True)
+                    await ctx.send('請求が正常に支払われました。')
                 except Exception as e:
                     await ctx.send(f'請求の支払いに失敗しました: {str(e)}', ephemeral=True)
             else:
@@ -257,7 +257,7 @@ async def on_component(event: Component):
             if not get_balance(ctx.guild_id, user_id) < sum([c[1] for c in get_requests(ctx.guild_id, user_id)]):
                 ids = [c[2] for c in get_requests(ctx.guild_id, user_id)]
                 pay_request(ids)
-                await ctx.send(f'全ての請求が正常に支払われました。', ephemeral=True)
+                await ctx.send(f'全ての請求が正常に支払われました。')
             else:
                 await ctx.send(f'所持金が不足しています。\n**現在の所持金:{get_balance(ctx.guild_id, user_id)}**', ephemeral=True)
         else:
@@ -289,7 +289,7 @@ async def on_component(event: Component):
                 if not get_balance(ctx.guild_id, billed_user_id) < get_pay(request_id)[3]:
                     try:
                         pay_request(request_id)
-                        await ctx.send('選択した請求が正常に支払われました。', ephemeral=True)
+                        await ctx.send('選択した請求が正常に支払われました。')
                     except Exception as e:
                         await ctx.send(f'請求の支払いに失敗しました: {str(e)}', ephemeral=True)
                 else:
@@ -459,8 +459,7 @@ async def set_all_balances(ctx: ComponentContext, amount: int):
 
 async def main():
     server_thread()
-    await bot.astart()  # bot.start() -> bot.astart() に変更
-
+    await bot.astart()
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
