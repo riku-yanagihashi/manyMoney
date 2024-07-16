@@ -124,6 +124,7 @@ def is_admin(guildid, userid):
     }
 ])
 async def balance(ctx: ComponentContext, user=None):
+    await ctx.defer(ephemeral=True)
     target_user = user or ctx.author
     guild_id = str(ctx.guild_id)
     user_id = str(target_user.id)
@@ -380,6 +381,7 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
     }
 ])
 async def add_admin(ctx: ComponentContext, user: Member):
+    await ctx.defer(ephemeral=True)
     guild_owner_id = get_guild_owner(int(ctx.guild_id))
     if str(ctx.author.id) != str(guild_owner_id):
         await ctx.send('このコマンドを実行する権限がありません。サーバー主のみが実行できます。', ephemeral=True)
@@ -455,7 +457,7 @@ async def set_all_balances(ctx: ComponentContext, amount: int):
             execute('UPDATE balances SET balance = %s WHERE guildid = %s AND userid = %s', (amount, guild_id, user_id))
 
     await ctx.send(f'すべてのユーザーの所持金が {amount} VTD に設定されました。', ephemeral=True)
-
+# TODO:あと何があるん？
 
 async def main():
     server_thread()
