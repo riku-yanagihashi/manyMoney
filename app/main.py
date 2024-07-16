@@ -367,6 +367,7 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
         return
     
     await ctx.defer()
+    
     set_balance(guild_id, user_id, get_balance(guild_id, user_id) - amount)
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
