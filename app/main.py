@@ -6,6 +6,7 @@ import aiohttp
 from interactions import Client, Intents, ComponentContext, slash_command, Member, Button, ButtonStyle, listen, StringSelectMenu
 from interactions.api.events import Component
 from server import server_thread
+# あ
 
 TOKEN = os.getenv("TOKEN")
 DB_DSN = os.getenv("DB")
