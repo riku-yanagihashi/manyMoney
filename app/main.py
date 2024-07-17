@@ -350,6 +350,7 @@ async def give(ctx: ComponentContext, amount: int, member: Member):
 ])
 async def confiscation(ctx: ComponentContext, amount: int, member: Member):
     await ctx.defer(ephemeral=True)
+    print("テスト1✔︎")
     if not is_admin(int(ctx.guild_id), int(ctx.author.id)):
         await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
         return
@@ -360,14 +361,17 @@ async def confiscation(ctx: ComponentContext, amount: int, member: Member):
     
     guild_id = int(ctx.guild_id)
     user_id = int(member.id)
+    print("テスト2✔︎")
     if get_balance(guild_id, user_id) < amount:
         await ctx.send('対象ユーザーの所持金が不足しています。', ephemeral=True)
         return
     
     
     set_balance(guild_id, user_id, get_balance(guild_id, user_id) - amount)
+    print("テスト3✔︎")
 
     await ctx.send(f'{ctx.author.mention} さんが {member.mention} さんから {amount} VTD を押収しました。')
+    print("テスト4✔︎")
 
 # 管理者を追加するコマンド（サーバー主のみ実行可能）
 @slash_command(name="add_admin", description="このアプリの管理者権限ユーザーを設定します", options=[
