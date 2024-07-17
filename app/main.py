@@ -349,24 +349,21 @@ async def give(ctx: ComponentContext, amount: int, member: Member):
     }
 ])
 async def confiscation(ctx: ComponentContext, amount: int, member: Member):
+    await ctx.defer(ephemeral=True)
     if not is_admin(int(ctx.guild_id), int(ctx.author.id)):
-        await ctx.defer(ephemeral=True)
         await ctx.send('このコマンドを実行する権限がありません。', ephemeral=True)
         return
     
     if amount <= 0:
-        await ctx.defer(ephemeral=True)
         await ctx.send('金額は正の整数でなければなりません。', ephemeral=True)
         return
     
     guild_id = int(ctx.guild_id)
     user_id = int(member.id)
     if get_balance(guild_id, user_id) < amount:
-        await ctx.defer(ephemeral=True)
         await ctx.send('対象ユーザーの所持金が不足しています。', ephemeral=True)
         return
     
-    await ctx.defer()
     
     set_balance(guild_id, user_id, get_balance(guild_id, user_id) - amount)
 
